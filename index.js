@@ -12,7 +12,7 @@ const MessageMapService = require("./services/MessageMapService");
   const client = await loginService.login();
   logger.info("Connected!");
 
-  MessageMapService.load();
+  await MessageMapService.load();
 
   // Get source and destination dialogs (Groups)
   const dialogs = new DialogService(client);

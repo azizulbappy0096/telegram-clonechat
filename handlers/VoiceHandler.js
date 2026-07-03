@@ -1,12 +1,16 @@
 const MediaHandler = require("./MediaHandler");
 
-class VoiceHandler {
+class VoiceHandler extends MediaHandler {
   canHandle(message) {
     return !!message.voice;
   }
 
   buildOptions(message, file) {
-    return { file, voiceNote: true };
+    return {
+      file,
+      caption: message.message || "",
+      voiceNote: true,
+    };
   }
 }
 

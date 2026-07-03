@@ -9,7 +9,8 @@ class VideoHandler extends MediaHandler {
     return {
       file,
       caption: message.message || "",
-      supportsStreaming: true,
+      videoNote: !!message.videoNote,
+      supportsStreaming: !message.videoNote,
     };
   }
 }

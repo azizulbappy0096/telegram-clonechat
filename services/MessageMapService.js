@@ -34,7 +34,7 @@ class MessageMapService {
    * Loads all mappings into memory.
    */
   async load() {
-    this.initialize();
+    await this.initialize();
 
     this.cache.clear();
 

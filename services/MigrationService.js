@@ -3,6 +3,8 @@ const CheckpointService = require("./CheckpointService");
 const ParserService = require("./ParserService");
 const SenderService = require("./SenderService");
 const ReplyService = require("./ReplyService");
+const DownloaderService = require("./DownloaderService");
+const TempFileService = require("./TempFileService");
 
 class MigrationService {
   constructor(client, messageMap) {
@@ -16,6 +18,8 @@ class MigrationService {
 
     this.sender = new SenderService(client);
     this.replyService = new ReplyService(messageMap);
+    this.tempFiles = new TempFileService();
+    this.downloader = new DownloaderService(client, this.tempFiles);
 
     this.parserService = new ParserService();
   }
@@ -43,34 +47,83 @@ class MigrationService {
   }
 
   async processMessages(messages, context) {
-    const checkpoint = CheckpointService.load();
+    CheckpointService.load();
+    const items = this.groupAlbums(messages);
 
     let current = 1;
 
-    for (const message of messages) {
-      logger.info(`Processing [${current}/${messages.length}]`);
+    for (const item of items) {
+      const itemMessages = Array.isArray(item) ? item : [item];
+      const pendingMessages = itemMessages.filter(
+        (message) => !this.messageMap.has(message.id),
+      );
 
+      logger.info(`Processing [${current}/${items.length}]`);
       current++;
-      if (
-        message.id <= checkpoint.lastMessageId ||
-        this.messageMap.has(message.id)
-      ) {
-        logger.info(`Skipping message ${message.id} (already processed)`);
-        this.stats.skipped++;
+
+      if (!pendingMessages.length) {
+        logger.info(
+          `Skipping message(s) ${itemMessages.map(({ id }) => id).join(", ")} (already processed)`,
+        );
+        this.stats.skipped += itemMessages.length;
         continue;
       }
 
       try {
-        const sent = await this.parserService.process(message, context);
+        const input =
+          pendingMessages.length > 1 ? pendingMessages : pendingMessages[0];
+        const sent = await this.parserService.process(input, context);
+        const sentMessages = Array.isArray(sent) ? sent : [sent];
 
-        this.messageMap.append(message.id, sent.id);
-        CheckpointService.save(message.id);
-        this.stats.processed++;
+        for (let index = 0; index < pendingMessages.length; index++) {
+          const sentMessage = sentMessages[index] || sentMessages[0];
+          if (!sentMessage || !sentMessage.id) {
+            throw new Error(
+              `No sent message returned for source message ${pendingMessages[index].id}`,
+            );
+          }
+
+          await this.messageMap.append(
+            pendingMessages[index].id,
+            sentMessage.id,
+          );
+        }
+
+        CheckpointService.save(pendingMessages[pendingMessages.length - 1].id);
+        this.stats.processed += pendingMessages.length;
+        this.stats.skipped += itemMessages.length - pendingMessages.length;
       } catch (err) {
-        this.stats.failed++;
+        this.stats.failed += pendingMessages.length;
         logger.error(err);
       }
     }
+  }
+
+  groupAlbums(messages) {
+    const items = [];
+
+    for (const message of messages) {
+      const groupedId = message.groupedId && message.groupedId.toString();
+      const previous = items[items.length - 1];
+      const previousMessages = Array.isArray(previous) ? previous : [previous];
+      const previousMessage = previousMessages[previousMessages.length - 1];
+      const previousGroupedId =
+        previousMessage &&
+        previousMessage.groupedId &&
+        previousMessage.groupedId.toString();
+
+      if (groupedId && groupedId === previousGroupedId) {
+        if (Array.isArray(previous)) {
+          previous.push(message);
+        } else {
+          items[items.length - 1] = [previous, message];
+        }
+      } else {
+        items.push(message);
+      }
+    }
+
+    return items;
   }
 
   async migrate(source, destination) {
@@ -84,18 +137,20 @@ class MigrationService {
       destination,
       services: {
         sender: this.sender,
-        downloader: () =>
-          logger.info("Downloader service is not implemented yet."),
+        downloader: this.downloader,
         reply: this.replyService,
         messageMap: this.messageMap,
-        tempFiles: () =>
-          logger.info("TempFiles service is not implemented yet."),
+        tempFiles: this.tempFiles,
       },
 
       // logger,
     };
 
-    await this.processMessages(messages, context);
+    try {
+      await this.processMessages(messages, context);
+    } finally {
+      await this.tempFiles.cleanup();
+    }
 
     logger.info("\n\n\nMigration complete.");
     logger.info(`Processed: ${this.stats.processed}`);
