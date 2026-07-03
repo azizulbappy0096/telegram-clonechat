@@ -5,11 +5,14 @@ const SenderService = require("./SenderService");
 const ReplyService = require("./ReplyService");
 const DownloaderService = require("./DownloaderService");
 const TempFileService = require("./TempFileService");
+const MessageTypeService = require("./MessageTypeService");
+const FailedMessageService = require("./FailedMessageService");
 
 class MigrationService {
-  constructor(client, messageMap) {
+  constructor(client, messageMap, failedMessages = FailedMessageService) {
     this.client = client;
     this.messageMap = messageMap;
+    this.failedMessages = failedMessages;
     this.stats = {
       processed: 0,
       failed: 0,
@@ -72,6 +75,9 @@ class MigrationService {
       try {
         const input =
           pendingMessages.length > 1 ? pendingMessages : pendingMessages[0];
+        const type = MessageTypeService.getType(
+          itemMessages.length > 1 ? itemMessages : input,
+        );
         const sent = await this.parserService.process(input, context);
         const sentMessages = Array.isArray(sent) ? sent : [sent];
 
@@ -86,6 +92,7 @@ class MigrationService {
           await this.messageMap.append(
             pendingMessages[index].id,
             sentMessage.id,
+            type,
           );
         }
 
@@ -95,6 +102,18 @@ class MigrationService {
       } catch (err) {
         this.stats.failed += pendingMessages.length;
         logger.error(err);
+
+        const type = MessageTypeService.getType(
+          itemMessages.length > 1 ? itemMessages : pendingMessages[0],
+        );
+
+        for (const message of pendingMessages) {
+          try {
+            await this.failedMessages.append(message.id, type, err);
+          } catch (failedLogError) {
+            logger.error(failedLogError);
+          }
+        }
       }
     }
   }
@@ -130,9 +149,9 @@ class MigrationService {
     logger.info("Loading messages...");
     const messages = await this.loadMessages(source);
     logger.info(`Loaded ${messages.length} messages.`);
+    await this.failedMessages.initialize();
 
     const context = {
-      // message,
       source,
       destination,
       services: {
@@ -142,8 +161,6 @@ class MigrationService {
         messageMap: this.messageMap,
         tempFiles: this.tempFiles,
       },
-
-      // logger,
     };
 
     try {

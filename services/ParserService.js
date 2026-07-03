@@ -3,6 +3,7 @@ const AlbumHandler = require("../handlers/AlbumHandler");
 const PhotoHandler = require("../handlers/PhotoHandler");
 const VoiceHandler = require("../handlers/VoiceHandler");
 const VideoHandler = require("../handlers/VideoHandler");
+const DocumentHandler = require("../handlers/DocumentHandler");
 const UnknownHandler = require("../handlers/UnknownHandler");
 
 class ParserService {
@@ -18,6 +19,8 @@ class ParserService {
 
       new VideoHandler(),
 
+      new DocumentHandler(),
+
       new UnknownHandler(),
     ];
   }
@@ -27,7 +30,6 @@ class ParserService {
   }
 
   async process(message, context) {
-    console.log(message);
     const handler = this.parse(message);
 
     return await handler.process(message, context);

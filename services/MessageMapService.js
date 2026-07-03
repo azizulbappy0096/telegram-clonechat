@@ -5,8 +5,8 @@ const readline = require("readline");
 const FILE = path.join(process.cwd(), "storage", "message-map.ndjson");
 
 class MessageMapService {
-  constructor() {
-    this.filePath = FILE;
+  constructor(filePath = FILE) {
+    this.filePath = filePath;
     this.cache = new Map();
     this.writeStream = null;
   }
@@ -56,15 +56,13 @@ class MessageMapService {
     }
   }
 
-  /**
-   * Appends a new mapping.
-   */
-  async append(oldId, newId) {
+  async append(oldId, newId, type = "unknown") {
     this.cache.set(oldId, newId);
 
     const row = JSON.stringify({
       old: oldId,
       new: newId,
+      type,
       migratedAt: new Date().toISOString(),
     });
 
@@ -114,3 +112,4 @@ class MessageMapService {
 }
 
 module.exports = new MessageMapService();
+module.exports.MessageMapService = MessageMapService;
