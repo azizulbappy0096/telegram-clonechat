@@ -1,17 +1,16 @@
-const logger = require("../services/LoggerService");
+const MediaHandler = require("./MediaHandler");
 
-class VideoHandler {
+class VideoHandler extends MediaHandler {
   canHandle(message) {
     return !!message.video;
   }
 
-  async process(message) {
-    logger.info({
-      type: "VIDEO",
-      id: message.id,
-    });
-
-    throw new Error(`VideoHandler is not implemented yet: ${message.id}`);
+  buildOptions(message, file) {
+    return {
+      file,
+      caption: message.message || "",
+      supportsStreaming: true,
+    };
   }
 }
 

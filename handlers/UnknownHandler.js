@@ -6,12 +6,9 @@ class UnknownHandler {
   }
 
   async process(message) {
-    logger.warn({
-      type: "UNKNOWN",
-      id: message.id,
-    });
+    logger.warn(`Unsupported message ${message.id}`);
 
-    throw new Error(`Unknown message type: ${message.id}`);
+    return null;
   }
 }
 

@@ -84,9 +84,12 @@ class MigrationService {
       destination,
       services: {
         sender: this.sender,
-        downloader: "dummy",
+        downloader: () =>
+          logger.info("Downloader service is not implemented yet."),
         reply: this.replyService,
         messageMap: this.messageMap,
+        tempFiles: () =>
+          logger.info("TempFiles service is not implemented yet."),
       },
 
       // logger,

@@ -1,17 +1,15 @@
-const logger = require("../services/LoggerService");
+const MediaHandler = require("./MediaHandler");
 
-class PhotoHandler {
+class PhotoHandler extends MediaHandler {
   canHandle(message) {
     return !!message.photo;
   }
 
-  async process(message, context) {
-    logger.info({
-      type: "PHOTO",
-      id: message.id,
-    });
-
-    throw new Error(`PhotoHandler is not implemented yet: ${message.id}`);
+  buildOptions(message, file) {
+    return {
+      file,
+      caption: message.message || "",
+    };
   }
 }
 
