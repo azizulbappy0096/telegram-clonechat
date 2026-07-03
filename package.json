@@ -4,13 +4,12 @@
   "description": "A quick tool to migrate contents from one chat to another within Telegram",
   "main": "index.js",
   "scripts": {
-    "test": "node --test",
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
   "repository": {
     "type": "git",
-    "url": "s"
+    "url": "https://github.com/azizulbappy0096/telegram-clonechat"
   },
   "author": "Azizul Bappy",
   "license": "ISC",
