@@ -20,6 +20,8 @@ another.
    SOURCE_GROUP=source_chat_id_username_or_exact_title
    DESTINATION_GROUP=destination_chat_id_username_or_exact_title
    SEND_DELAY_MS=1000
+   INVITE_BATCH_SIZE=10
+   INVITE_DELAY_MS=30000
    ```
 
    Get `API_ID` and `API_HASH` from your Telegram API application. The source
@@ -29,6 +31,10 @@ another.
    sends; it defaults to 1000 milliseconds and can be set to `0` to disable
    proactive pacing. Telegram-requested flood and slow-mode waits are always
    respected automatically.
+
+   `INVITE_BATCH_SIZE` controls how many private-message attempts are made per
+   invitation run and is capped at 50. `INVITE_DELAY_MS` is the delay between
+   those attempts and defaults to 30 seconds.
 
 ## Run
 
@@ -44,6 +50,24 @@ normally do not require another login.
 
 The migrator currently handles text, photos, albums, voice messages, videos,
 and documents.
+
+## Invite source members
+
+The destination invite link is created automatically on the first run and
+reused from `storage/member-invite.json`. Run one invitation batch with:
+
+```bash
+npm run invite-members
+```
+
+Run the command again later to process the next batch. Results are appended to
+`storage/member-invitations.ndjson`, so successfully invited members, bots,
+deleted accounts, privacy failures, and existing destination members are not
+retried. A participant with a temporary error is tried at most three times.
+
+Edit the private invitation text in `config/invitationMessage.js`. Keep the
+`inviteLink` placeholder in the returned message so recipients receive the
+automatically created destination link.
 
 ## Progress and failures
 
