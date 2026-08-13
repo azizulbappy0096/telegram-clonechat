@@ -27,4 +27,5 @@ const MessageMapService = require("./services/MessageMapService");
   const migration = new MigrationService(client, MessageMapService);
 
   await migration.migrate(source.entity, destination.entity);
+  process.exit(0);
 })();

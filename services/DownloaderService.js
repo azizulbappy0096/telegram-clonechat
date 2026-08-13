@@ -1,5 +1,6 @@
 const path = require("path");
 const mime = require("mime-types");
+const withFloodWait = require("../utils/floodWait");
 
 class DownloaderService {
   constructor(client, tempFiles) {
@@ -25,9 +26,13 @@ class DownloaderService {
     const filePath = await this.tempFiles.add(this.getFileName(message));
 
     try {
-      const downloaded = await this.client.downloadMedia(message, {
-        outputFile: filePath,
-      });
+      const downloaded = await withFloodWait(
+        () =>
+          this.client.downloadMedia(message, {
+            outputFile: filePath,
+          }),
+        `Downloading message ${message.id}`,
+      );
 
       if (!downloaded || Buffer.isBuffer(downloaded)) {
         throw new Error(`Telegram did not download message ${message.id} to disk`);

@@ -1,10 +1,13 @@
-const { FloodWaitError } = require("telegram/errors");
-
 const logger = require("./LoggerService");
+const config = require("../config/telegram");
+const withFloodWait = require("../utils/floodWait");
+const sleep = require("../utils/sleep");
 
 class SenderService {
-  constructor(client) {
+  constructor(client, sendDelayMs = config.sendDelayMs) {
     this.client = client;
+    this.sendDelayMs = sendDelayMs;
+    this.nextSendAt = 0;
   }
 
   async sendMessage(destination, options) {
@@ -24,29 +27,15 @@ class SenderService {
   }
 
   async execute(fn) {
-    while (true) {
-      try {
-        return await fn();
-      } catch (error) {
-        if (error instanceof FloodWaitError) {
-          const seconds = error.seconds;
-
-          logger.warn(`FloodWait ${seconds}s`);
-
-          await this.sleep(seconds * 1000);
-
-          continue;
-        }
-
-        throw error;
-      }
+    const remainingDelay = this.nextSendAt - Date.now();
+    if (remainingDelay > 0) {
+      await sleep(remainingDelay);
     }
-  }
 
-  sleep(ms) {
-    return new Promise((resolve) => {
-      setTimeout(resolve, ms);
-    });
+    const result = await withFloodWait(fn, "Sending message");
+    this.nextSendAt = Date.now() + this.sendDelayMs;
+
+    return result;
   }
 }
 

@@ -7,6 +7,7 @@ const DownloaderService = require("./DownloaderService");
 const TempFileService = require("./TempFileService");
 const MessageTypeService = require("./MessageTypeService");
 const FailedMessageService = require("./FailedMessageService");
+const withFloodWait = require("../utils/floodWait");
 
 class MigrationService {
   constructor(client, messageMap, failedMessages = FailedMessageService) {
@@ -29,11 +30,18 @@ class MigrationService {
 
   async loadMessages(source) {
     const messages = [];
+    const iterator = this.client
+      .iterMessages(source, { reverse: true })
+      [Symbol.asyncIterator]();
 
-    for await (const message of this.client.iterMessages(source, {
-      reverse: true,
-    })) {
-      messages.push(message);
+    while (true) {
+      const result = await withFloodWait(
+        () => iterator.next(),
+        "Loading source messages",
+      );
+
+      if (result.done) break;
+      messages.push(result.value);
     }
 
     return messages;

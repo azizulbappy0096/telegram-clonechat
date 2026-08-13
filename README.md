@@ -19,12 +19,16 @@ another.
    API_HASH=your_telegram_api_hash
    SOURCE_GROUP=source_chat_id_username_or_exact_title
    DESTINATION_GROUP=destination_chat_id_username_or_exact_title
+   SEND_DELAY_MS=1000
    ```
 
    Get `API_ID` and `API_HASH` from your Telegram API application. The source
    and destination can be a chat ID, username, or exact dialog title. Your
    Telegram account must have access to both chats and permission to post in
-   the destination.
+   the destination. `SEND_DELAY_MS` is the minimum delay between successful
+   sends; it defaults to 1000 milliseconds and can be set to `0` to disable
+   proactive pacing. Telegram-requested flood and slow-mode waits are always
+   respected automatically.
 
 ## Run
 

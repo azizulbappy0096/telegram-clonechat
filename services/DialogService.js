@@ -1,4 +1,5 @@
 const logger = require("./LoggerService");
+const withFloodWait = require("../utils/floodWait");
 
 class DialogService {
   constructor(client) {
@@ -8,7 +9,10 @@ class DialogService {
 
   async listDialogs() {
     if (!this.dialogs) {
-      this.dialogs = await this.client.getDialogs({});
+      this.dialogs = await withFloodWait(
+        () => this.client.getDialogs({}),
+        "Loading dialogs",
+      );
     }
     return this.dialogs;
   }

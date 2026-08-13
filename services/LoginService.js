@@ -50,6 +50,9 @@ class LoginService {
       onError: (err) => logger.error(err),
     });
 
+    // Migration requests use the shared wait handler, including long waits.
+    this.client.floodSleepThreshold = 0;
+
     this.saveSession(this.client.session.save());
 
     logger.info("Telegram login successful.");
